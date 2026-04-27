@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import threading
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -8,7 +9,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from flask import Flask
-import threading
 
 # ===== ТВОИ ДАННЫЕ =====
 BOT_TOKEN = "8768778011:AAGy_xl12xKhrGdZ6iVK28TS5w-OANuAlRM"
@@ -309,24 +309,14 @@ async def cancel(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("❌ Действие отменено", reply_markup=main_menu())
 
-async def main():
-    print("=" * 40)
-    print("🤝 Помощник координатора")
-    print("=" * 40)
-    print("✅ Бот запущен")
-    print(f"📊 Групп в базе: {len(groups)}")
-    print("=" * 40)
-    
-    # Запускаем Flask в отдельном потоке для healthcheck
-    def run_flask():
-        port = int(os.environ.get("PORT", 8080))
-        app_flask.run(host="0.0.0.0", port=port)
-    
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.start()
-    
-    # Запускаем бота
-    await dp.start_polling(bot)
+# Функция для запуска бота в фоне
+def run_bot():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(dp.start_polling(bot))
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# Запускаем бота в отдельном потоке при импорте модуля
+bot_thread = threading.Thread(target=run_bot, daemon=True)
+bot_thread.start()
+
+print("✅ Flask и бот запущены")
